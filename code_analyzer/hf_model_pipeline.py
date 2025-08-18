@@ -2,7 +2,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from transformers.pipelines import SUPPORTED_TASKS
 from typing import Literal
 
-PipelineTasks = Literal[ # For IDE warnings
+PipelineTasks = Literal[
     "feature-extraction",
     "sentiment-analysis",
     "ner",
@@ -19,12 +19,44 @@ PipelineTasks = Literal[ # For IDE warnings
 class HFModelPipeline:
     """A wrapper for Hugging Face model pipeline to generate text responses."""
 
-    def __init__(self, local_model_path: str) -> None:
+    def __init__(self,
+                 local_model_path: str,
+                 *,
+                 task: PipelineTasks = "text-generation",
+                 do_sample: bool = True,
+                 temperature: float = 0.7,
+                 top_p: float = 0.9,
+                 top_k: int = 40,
+                 max_length: int = 8192,
+                 padding: bool = True,
+                 truncation: bool = True,
+                 ) -> None:
         """Initialize the HFModelPipeline.
         Parameters
         ----------
         local_model_path : str
-            The local path to the Hugging Face model directory."""
+            The local path to the Hugging Face model directory.
+        task : PipelineTasks, optional
+            The task to perform with the model. Default is "text-generation".
+        do_sample : bool, optional
+            Whether to enable sampling. Defaults to True.
+        temperature : float, optional
+            The temperature for sampling. Defaults to 0.7.
+        top_p : float, optional
+            The top-p value for nucleus sampling. Defaults to 0.9.
+        top_k : float, optional
+            The top-k value for sampling. Defaults to 40.
+        max_length : int, optional
+            The maximum length of the generated text. Defaults to 8192.
+        padding : bool, optional
+            Whether to pad the input sequences. Defaults to True.
+        truncation : bool, optional
+            Whether to truncate the input sequences. Defaults to True.
+        Raises
+        ------
+        ValueError
+            If the given `task` is not supported by Hugging Face pipelines.
+        """
         self._model = None
         self._tokenizer = None
         self._generator = None
@@ -32,10 +64,15 @@ class HFModelPipeline:
 
         self.__load_tokenizer()
         self.__load_model()
-        self.__create_pipeline()
+        self.__create_pipeline(task, do_sample, temperature, top_p, top_k, max_length, padding, truncation)
 
-    def get_model_response(self, prompt: str, *, return_full_text: bool = False,
-                           max_new_tokens: int = 500, **gen_overrides) -> str:
+    def get_model_response(self,
+                           prompt: str,
+                           *,
+                           return_full_text: bool = False,
+                           max_new_tokens: int = 500,
+                           **gen_overrides,
+                           ) -> str:
         """Generate a response from the model for a given prompt.
         Parameters
         ----------
@@ -45,7 +82,7 @@ class HFModelPipeline:
             Whether to return the full text (prompt + completion) from the pipeline. Defaults to False.
         max_new_tokens : int, optional
             Maximum number of new tokens to generate for this call. Defaults to 500.
-        gen_overrides : dict
+        gen_overrides : dict, optional
             Additional generation parameters to override the stored defaults for this call (e.g., temperature=0.8).
         Returns
         -------
@@ -73,33 +110,34 @@ class HFModelPipeline:
         self._model = AutoModelForCausalLM.from_pretrained(self._local_model_path)
 
     def __create_pipeline(self,
-                          task: PipelineTasks = "text-generation",
-                          do_sample: bool = True,
-                          temperature: float = .7,
-                          top_p: float = .9,
-                          top_k: float = 40,
-                          max_length: int = 8192,
-                          padding: bool = True,
-                          truncation: bool = True
+                          task,
+                          do_sample,
+                          temperature,
+                          top_p,
+                          top_k,
+                          max_length,
+                          padding,
+                          truncation
                           ) -> None:
         """Creates a text-generation pipeline
+        Parameters
         ----------
-        task : PipelineTasks, optional
-            The task to perform with the model. Defaults to "text-generation".
-        do_sample : bool, optional
-            Whether to enable sampling. Defaults to True.
-        temperature : float, optional
-            The temperature for sampling. Defaults to 0.7.
-        top_p : float, optional
-            The top-p value for nucleus sampling. Defaults to 0.9.
-        top_k : float, optional
-            The top-k value for sampling. Defaults to 40.
-        max_length : int, optional
-            The maximum length of the generated text. Defaults to 8192.
-        padding : bool, optional
-            Whether to pad the input sequences. Defaults to True.
-        truncation : bool, optional
-            Whether to truncate the input sequences. Defaults to True.
+        task : PipelineTasks
+            The task to perform with the model.
+        do_sample : bool
+            Whether to enable sampling.
+        temperature : float
+            The temperature for sampling.
+        top_p : float
+            The top-p value for nucleus sampling.
+        top_k : float
+            The top-k value for sampling.
+        max_length : int
+            The maximum length of the generated text.
+        padding : bool
+            Whether to pad the input sequences.
+        truncation : bool
+            Whether to truncate the input sequences.
         Raises
         ------
         ValueError

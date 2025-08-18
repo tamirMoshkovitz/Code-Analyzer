@@ -184,5 +184,5 @@ fabric.properties
 # idea folder, uncomment if you don't need it
 # .idea
 
-# gemma3 model files
-gemma-3-1b-it-model/
+# model files
+models/

@@ -1,5 +1,3 @@
-import os
-from huggingface_hub import login, snapshot_download
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from transformers.pipelines import SUPPORTED_TASKS
 from typing import Literal
@@ -21,23 +19,17 @@ PipelineTasks = Literal[ # For IDE warnings
 class HFModelPipeline:
     """A wrapper for Hugging Face model pipeline to generate text responses."""
 
-    def __init__(self, model_id: str = "google/gemma-3-1b-it",
-                 local_model_dir: str = "gemma-3-1b-it-model") -> None:
-        """Initialize the HFModelPipeline, including downloading the model to a local directory.
-        Args:
-            model_id (str): The Hugging Face model ID to use.
-            local_model_dir (str): The local directory to cache the model.
-        """
+    def __init__(self, local_model_path: str) -> None:
+        """Initialize the HFModelPipeline.
+        Parameters
+        ----------
+        local_model_path : str
+            The local path to the Hugging Face model directory."""
         self._model = None
         self._tokenizer = None
         self._generator = None
-        self._model_id = model_id
-        self._local_model_dir = local_model_dir
-        self._local_model_path = None
+        self._local_model_path = local_model_path
 
-        self.__retrieve_hugging_face_token()
-        self.__authenticate()
-        self.__download_model()
         self.__load_tokenizer()
         self.__load_model()
         self.__create_pipeline()
@@ -72,35 +64,13 @@ class HFModelPipeline:
         )
         return outputs[0]["generated_text"]
 
-    def __retrieve_hugging_face_token(self):
-        """Retrieve Hugging Face token from os or prompt user."""
-        self._hf_token = os.getenv('HF_TOKEN')
-        # If not set, ask the user to enter the token
-        if not self._hf_token:
-            self._hf_token = input("Please enter your Hugging Face READ token: ")
-            os.environ['HF_TOKEN'] = self._hf_token  # Set the token for the current session
-
-    def __authenticate(self) -> None:
-        """Authenticate using the Hugging Face token."""
-        login(token=self._hf_token)
-
-    def __download_model(self) -> None:
-        """Download and cache the model from Hugging Face if needed."""
-        self._local_model_path = snapshot_download(
-            self._model_id,
-            local_dir=self._local_model_dir,
-            repo_type="model",
-        )
-
     def __load_tokenizer(self) -> None:
         """Load the tokenizer from the local path."""
         self._tokenizer = AutoTokenizer.from_pretrained(self._local_model_path, model_max_length=8192)
 
     def __load_model(self) -> None:
         """Load the model from the local path."""
-        self._model = AutoModelForCausalLM.from_pretrained(
-            self._local_model_path
-        )
+        self._model = AutoModelForCausalLM.from_pretrained(self._local_model_path)
 
     def __create_pipeline(self,
                           task: PipelineTasks = "text-generation",

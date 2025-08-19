@@ -1,22 +1,25 @@
 import argparse
 import sys
+import traceback
 from pathlib import Path
+from jinja2.utils import Namespace
 from hf_model_downloader import HFModelDownloader
 from hf_model_pipeline import HFModelPipeline
-# Only import Parser from tree_sitter
 from tree_sitter import Parser
-# Try to import get_language from tree_sitter_languages if available
-try:
-    from tree_sitter_languages import get_language as _ts_get_language
-except Exception:
-    _ts_get_language = None
+from tree_sitter_languages import get_language as _ts_get_language
 from typing import Iterable, Tuple, List
 
-CPP_FILE_SUFFICES = ('.cpp', '.cc', '.cxx', '.hpp', '.h', '.hh', '.hxx')
-SUPPORTED_LANGUAGES = ('c', 'cpp')
+SUPPORTED_FILES_TO_LANGUAGES = {".c": "c",
+                                ".cpp": "cpp",
+                                ".cc": "cpp",
+                                ".cxx": "cpp",
+                                ".h": "cpp",
+                                ".hpp": "cpp",
+                                ".hh": "cpp",
+                                ".hxx": "cpp"}
 
-MAX_LINES_PER_CHUNK =400 # this limit should be safe for gemma-3.1b-it with max_length of 8192 tokens, could be overridden by command line argument
-MAX_CHARS_PER_CHUNK = 12000 # similar
+MAX_LINES_PER_CHUNK = 400  # this limit should be safe for gemma-3.1b-it with max_length of 8192 tokens, could be overridden by command line argument
+MAX_CHARS_PER_CHUNK = 12000  # similar
 
 PROMPT = """
 <start_of_turn>user
@@ -34,8 +37,18 @@ Now analyze this code (header context may be repeated across chunks):
 """
 GEMMA3_1B_IT_MODEL_ID = "google/gemma-3-1b-it"
 
+
+class UnsupportedFileError(Exception):
+    """Raised when an unsupported file extension is encountered."""
+
+    def __init__(self, suffix: str):
+        super().__init__(f"Unsupported file extension: {suffix}")
+        self.suffix = suffix
+
+
 def _parse_arguments() -> argparse.Namespace:
-    """Parse command line arguments for the C/C++ security analyzer chunker.
+    """
+    Parse command line arguments for the C/C++ security analyzer chunker.
     Returns
     -------
     argparse.Namespace
@@ -50,7 +63,11 @@ def _parse_arguments() -> argparse.Namespace:
                         help="Max characters per chunk (hard cap)")
     parser.add_argument("--prompt", type=str, default=PROMPT,
                         help="Prompt template to use for the model (default is Gemma-3.1b-it prompt), should contain {code} placeholder")
+    parser.add_argument("--treat-h-as-c", action="store_true", default=False,
+                        help="Treat .h files as C code (default is C++)")
+    parser.add_argument("--debug", action="store_true", default=False, help="Enable debug output")
     return parser.parse_args()
+
 
 def _read_code_file(code_path: str) -> str:
     """Read and return the contents of the given code file.
@@ -69,6 +86,7 @@ def _read_code_file(code_path: str) -> str:
     except FileNotFoundError:
         print(f"File not found: {code_path}")
         sys.exit(1)
+
 
 def _extract_header_context(lines: list[str]) -> tuple[str, int]:
     """
@@ -98,6 +116,7 @@ def _extract_header_context(lines: list[str]) -> tuple[str, int]:
         return "".join(header) + ("\n" if header and header[-1].strip() else ""), i
     return "".join(header), len(lines)
 
+
 def _is_header_line(line: str) -> bool:
     """ Check if a line is part of the header context.
     Parameters
@@ -113,7 +132,8 @@ def _is_header_line(line: str) -> bool:
             line.startswith("typedef") or line.startswith("namespace ") or line.startswith("struct ") or
             line.startswith("class "))
 
-def _get_language_from_path(file_path: str) -> str:
+
+def _get_language_from_path(file_path: str, mapping: dict[str, str]) -> str:
     """
     Determine the Tree-sitter language based on the file extension.
     Returns 'c' for `.c` files, 'cpp' for C++-related extensions,
@@ -122,23 +142,24 @@ def _get_language_from_path(file_path: str) -> str:
     ----------
     file_path : str
         Path to the code file.
+    mapping : dict
+        A mapping of file extensions to language identifiers.
+        E.g., {".c": "c", ".cpp": "cpp", ".h": "cpp"}.
     Returns
     -------
     str
         The language identifier ('c' or 'cpp').
     Raises
     ------
-    SystemExit
+    UnsupportedFileError
         If the file extension is not supported.
     """
-    suffix = Path(file_path).suffix.lower()
-    if suffix == '.c':
-        return 'c'
-    elif suffix in CPP_FILE_SUFFICES:
-        return 'cpp'
+    file_type = Path(file_path).suffix.lower()
+    if file_type in mapping:
+        return mapping[file_type]
     else:
-        print(f"Unsupported file: {suffix}", file=sys.stderr)
-        sys.exit(1)
+        raise UnsupportedFileError(file_type)
+
 
 def _get_model_path(args: argparse.Namespace) -> str:
     """Get the model path based on command line arguments.
@@ -173,7 +194,7 @@ def _build_ts_parser(lang_name: str) -> Parser:
     ValueError
         If an unsupported language is specified.
     """
-    if lang_name not in SUPPORTED_LANGUAGES:
+    if lang_name not in SUPPORTED_FILES_TO_LANGUAGES.values():
         raise ValueError(f"Unsupported language: {lang_name}")
 
     if _ts_get_language is None:
@@ -211,6 +232,7 @@ def ast_split_into_chunks(code_str: str,
     If parsing fails or no nodes are found, fall back to a simple line-based
     greedy chunker that respects `max_chars` and `overlap`.
     """
+
     # Helper: simple line-based fallback generator
     def _fallback_chunks() -> Iterable[Tuple[int, int]]:
         n = len(lines)
@@ -266,8 +288,8 @@ def ast_split_into_chunks(code_str: str,
             if child.start_byte >= child.end_byte:
                 continue
 
-            node_start = child.start_point[0]   # 0-based
-            node_end = child.end_point[0]       # inclusive
+            node_start = child.start_point[0]  # 0-based
+            node_end = child.end_point[0]  # inclusive
             node_bytes = child.end_byte - child.start_byte
             is_comment = getattr(child, "type", "") == "comment"
 
@@ -280,7 +302,7 @@ def ast_split_into_chunks(code_str: str,
                 else:
                     # Extend if contiguous or separated only by blank lines
                     if (pending_comment_end is not None
-                        and _only_blank_between(pending_comment_end + 1, node_start - 1)):
+                            and _only_blank_between(pending_comment_end + 1, node_start - 1)):
                         pending_comment_end = max(pending_comment_end, node_end)
                         pending_comment_bytes += node_bytes
                     else:
@@ -379,19 +401,30 @@ def ast_split_into_chunks(code_str: str,
             break
 
 
-def _analyze_code(prompt: str, lang: str, lines_num: int) -> None:
+def _analyze_code(pipeline: HFModelPipeline, prompt: str, lang: str, lines_num: int, header_ctx: str, code: str,
+                  lines: List[str], max_chars: int) -> None:
     """Analyze the code using the specified language and number of lines.
     Parameters
     ----------
+    pipeline : HFModelPipeline
+        The Hugging Face model pipeline to use for analysis.
     prompt : str
         The prompt template to use for the model, should contain {code} placeholder.
     lang : str
         The programming language of the code (e.g., 'c' or 'cpp').
     lines_num : int
         The total number of lines in the code.
+    header_ctx : str
+        The header context extracted from the code, to be included in each chunk.
+    code : str
+        The full code as a string.
+    lines : List[str]
+        The list of lines from the code file, including line endings.
+    max_chars : int
+        The maximum number of characters allowed in each chunk.
     """
     print("\nAnalyzer output:\n")
-    chunk_iter = ast_split_into_chunks(code, lines, max_chars=args.max_chars, lang_name=lang)
+    chunk_iter = ast_split_into_chunks(code, lines, max_chars=max_chars, lang_name=lang)
     for start_idx, end_idx in chunk_iter:
         chunk = "".join(
             f"Line {lineno + 1}: \t{line}"
@@ -410,8 +443,8 @@ def _analyze_code(prompt: str, lang: str, lines_num: int) -> None:
         result = pipeline.get_model_response(chunk_prompt)
         print(result)
 
-if __name__ == "__main__":
-    args = _parse_arguments()
+
+def _main(args: Namespace) -> int:
     code_path = args.code_file_path
     code = _read_code_file(code_path)
 
@@ -419,12 +452,36 @@ if __name__ == "__main__":
     number_of_lines = len(lines)
     header_ctx, header_stop_idx = _extract_header_context(lines)
 
-    file_type = _get_language_from_path(code_path)
+    language_mapping = dict(SUPPORTED_FILES_TO_LANGUAGES)
+    if args.treat_h_as_c:
+        SUPPORTED_FILES_TO_LANGUAGES[".h"] = "c"
+    file_type = _get_language_from_path(code_path, language_mapping)
 
     model_path = _get_model_path(args)
 
     pipeline = HFModelPipeline(model_path)
 
-    _analyze_code(args.prompt, file_type, number_of_lines)
+    _analyze_code(pipeline, args.prompt, file_type, number_of_lines, header_ctx, code, lines, args.max_chars)
 
     print("\nAnalysis complete.\n")
+    return 0
+
+
+if __name__ == "__main__":
+    args = _parse_arguments()
+    try:
+        sys.exit(_main(args))
+    except KeyboardInterrupt:
+        # 130 is conventional for Ctrl-C
+        print("Interrupted.", file=sys.stderr)
+        sys.exit(130)
+    except SystemExit as e:
+        # Preserve intended exit codes (e.code may be None)
+        raise
+    except Exception as e:
+        # Compact message by default; verbose when --debug
+        if args.debug:
+            traceback.print_exc()
+        else:
+            print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)

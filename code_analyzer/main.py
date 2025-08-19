@@ -473,7 +473,7 @@ if __name__ == "__main__":
         sys.exit(_main(args))
     except KeyboardInterrupt:
         # 130 is conventional for Ctrl-C
-        print("Interrupted.", file=sys.stderr)
+        print("\nInterrupted.", file=sys.stderr)
         sys.exit(130)
     except SystemExit as e:
         # Preserve intended exit codes (e.code may be None)
@@ -483,5 +483,5 @@ if __name__ == "__main__":
         if args.debug:
             traceback.print_exc()
         else:
-            print(f"Error: {e}", file=sys.stderr)
+            print(f"\nError: {e}", file=sys.stderr)
         sys.exit(1)

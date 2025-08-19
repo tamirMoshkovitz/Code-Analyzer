@@ -4,11 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="bcf3fdf1-d3ca-4705-8a03-a0c1dee80841" name="Changes" comment="deleted old hf script">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+    <list default="true" id="bcf3fdf1-d3ca-4705-8a03-a0c1dee80841" name="Changes" comment="warning fix: remove max_length parameter from pipeline, use only max new tokens instead">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_analyzer/hf_model_pipeline.py" beforeDir="false" afterPath="$PROJECT_DIR$/code_analyzer/hf_model_pipeline.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/code_analyzer/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/code_analyzer/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -86,7 +85,7 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/code_analyzer/main.py" />
-      <option name="PARAMETERS" value="$PROJECT_DIR$/Tests/notes.cpp" />
+      <option name="PARAMETERS" value="$PROJECT_DIR$/Tests/library.c" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -120,6 +119,7 @@
       <workItem from="1755346020186" duration="7143000" />
       <workItem from="1755373621941" duration="32233000" />
       <workItem from="1755504893029" duration="5807000" />
+      <workItem from="1755593231898" duration="27007000" />
     </task>
     <task id="LOCAL-00001" summary="Opened project">
       <option name="closed" value="true" />
@@ -161,7 +161,39 @@
       <option name="project" value="LOCAL" />
       <updated>1755511597085</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="seperated model download and pipeline logic to two files (download became a util class)">
+      <option name="closed" value="true" />
+      <created>1755529710053</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1755529710053</updated>
+    </task>
+    <task id="LOCAL-00007" summary="refactor: enhance HFModelPipeline initialization with additional optional parameters and detailed docstrings">
+      <option name="closed" value="true" />
+      <created>1755530848235</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1755530848235</updated>
+    </task>
+    <task id="LOCAL-00008" summary="refactor: improve model downloading logic: first try with no token, later allow 3 trys to provide a valid token">
+      <option name="closed" value="true" />
+      <created>1755534822779</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1755534822779</updated>
+    </task>
+    <task id="LOCAL-00009" summary="warning fix: remove max_length parameter from pipeline, use only max new tokens instead">
+      <option name="closed" value="true" />
+      <created>1755613312090</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1755613312090</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -196,12 +228,16 @@
     <MESSAGE value="wrote a simple script that downloads the model, set up a pipeline and generates prompt responses" />
     <MESSAGE value="wrote a simple main file that reads a code file as is, prompt the model and prints the response" />
     <MESSAGE value="deleted old hf script" />
-    <option name="LAST_COMMIT_MESSAGE" value="deleted old hf script" />
+    <MESSAGE value="seperated model download and pipeline logic to two files (download became a util class)" />
+    <MESSAGE value="refactor: enhance HFModelPipeline initialization with additional optional parameters and detailed docstrings" />
+    <MESSAGE value="refactor: improve model downloading logic: first try with no token, later allow 3 trys to provide a valid token" />
+    <MESSAGE value="warning fix: remove max_length parameter from pipeline, use only max new tokens instead" />
+    <option name="LAST_COMMIT_MESSAGE" value="warning fix: remove max_length parameter from pipeline, use only max new tokens instead" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/CodeAnalyzer$huggingface.coverage" NAME="huggingface Coverage Results" MODIFIED="1755510021079" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/code_analyzer" />
     <SUITE FILE_PATH="coverage/CodeAnalyzer$__init__.coverage" NAME="__init__ Coverage Results" MODIFIED="1755448259621" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/code_analyzer" />
-    <SUITE FILE_PATH="coverage/CodeAnalyzer$main.coverage" NAME="main Coverage Results" MODIFIED="1755513451066" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/code_analyzer" />
+    <SUITE FILE_PATH="coverage/CodeAnalyzer$main.coverage" NAME="main Coverage Results" MODIFIED="1755628995879" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/code_analyzer" />
     <SUITE FILE_PATH="coverage/CodeAnalyzer$hf_model_pipeline.coverage" NAME="hf_model_pipeline Coverage Results" MODIFIED="1755511614124" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/code_analyzer" />
   </component>
 </project>

@@ -43,6 +43,10 @@ class UnsupportedFileError(Exception):
         self.suffix = suffix
 
 
+def get_default_model_id() -> str:
+    """Get the default model ID for the C/C++ security analyzer."""
+    return DEFAULT_MODEL_ID
+
 def _parse_arguments() -> argparse.Namespace:
     """
     Parse command line arguments for the C/C++ security analyzer chunker.

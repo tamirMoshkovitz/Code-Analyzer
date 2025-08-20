@@ -51,7 +51,7 @@ sudo docker run --rm \
 
 ## 3. Run the tool
 
-Show help:
+Show help (and learn about analyze arguments):
 ```bash
 sudo docker run --rm code-analyzer:dev --help
 ```

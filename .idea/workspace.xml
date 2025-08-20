@@ -4,9 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="bcf3fdf1-d3ca-4705-8a03-a0c1dee80841" name="Changes" comment="formating">
+    <list default="true" id="bcf3fdf1-d3ca-4705-8a03-a0c1dee80841" name="Changes" comment="feat: add option to include header context for improved code chunk analysis">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_analyzer/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/code_analyzer/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -118,7 +117,7 @@
       <workItem from="1755346020186" duration="7143000" />
       <workItem from="1755373621941" duration="32233000" />
       <workItem from="1755504893029" duration="5807000" />
-      <workItem from="1755593231898" duration="44454000" />
+      <workItem from="1755593231898" duration="45725000" />
     </task>
     <task id="LOCAL-00001" summary="Opened project">
       <option name="closed" value="true" />
@@ -240,7 +239,15 @@
       <option name="project" value="LOCAL" />
       <updated>1755686193532</updated>
     </task>
-    <option name="localTasksCounter" value="16" />
+    <task id="LOCAL-00016" summary="feat: add option to include header context for improved code chunk analysis">
+      <option name="closed" value="true" />
+      <created>1755686493335</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1755686493335</updated>
+    </task>
+    <option name="localTasksCounter" value="17" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -285,7 +292,8 @@
     <MESSAGE value="created an ast-parser class, moved parsing logic out of main" />
     <MESSAGE value="refactor chunk parsing logic and added helper methods" />
     <MESSAGE value="formating" />
-    <option name="LAST_COMMIT_MESSAGE" value="formating" />
+    <MESSAGE value="feat: add option to include header context for improved code chunk analysis" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat: add option to include header context for improved code chunk analysis" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/CodeAnalyzer$huggingface.coverage" NAME="huggingface Coverage Results" MODIFIED="1755510021079" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/code_analyzer" />

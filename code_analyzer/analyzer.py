@@ -2,9 +2,9 @@ import argparse
 import sys
 import traceback
 from pathlib import Path
-from syntax_tree_chunk_parser import SyntaxTreeChunkParser
-from hf_model_downloader import HFModelDownloader
-from hf_model_pipeline import HFModelPipeline
+from code_analyzer.syntax_tree_chunk_parser import SyntaxTreeChunkParser
+from code_analyzer.hf_model_downloader import HFModelDownloader
+from code_analyzer.hf_model_pipeline import HFModelPipeline
 
 
 SUPPORTED_FILES_TO_LANGUAGES = {".c": "c", # language names should correspond to tree-sitter language names
@@ -55,7 +55,7 @@ def _parse_arguments() -> argparse.Namespace:
     argparse.Namespace
         Parsed command line arguments.
     """
-    parser = argparse.ArgumentParser(description="C/C++ security analyzer chunker")
+    parser = argparse.ArgumentParser(description="C/C++ files security analyzer")
     parser.add_argument("code_file_path", help="Path to the C/C++ file to analyze")
     parser.add_argument("--model-id", default=DEFAULT_MODEL_ID, help=f"HF model ID, default is {DEFAULT_MODEL_ID}")
     parser.add_argument("--model-path", default=None, help="Local model path - if already downloaded, use this instead of model ID")

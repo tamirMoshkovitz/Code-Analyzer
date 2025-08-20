@@ -1,10 +1,7 @@
 import os
-import sys
 from huggingface_hub import login, snapshot_download
 from huggingface_hub.utils import HfHubHTTPError
 from huggingface_hub.hf_api import RepositoryNotFoundError
-
-AUTHORIZATION_TRIALS_NUMBER: int = 4
 
 
 class HFModelDownloader:
@@ -25,12 +22,14 @@ class HFModelDownloader:
 
     @staticmethod
     def __retrieve_hugging_face_token() -> None:
-        """Retrieve Hugging Face token from env or prompt user."""
+        """Retrieve Hugging Face token from env or prompt user.
+        Raises
+        -------
+        EnvironmentError
+            If no Hugging Face token is found in the environment variables.
+        """
         if HFModelDownloader._hf_token is None:
             token = os.getenv("HF_TOKEN")
-            if not token:
-                token = input("Please enter your Hugging Face READ token: ")
-                os.environ["HF_TOKEN"] = token  # Set for this session
             HFModelDownloader._hf_token = token
 
     @staticmethod
@@ -57,23 +56,27 @@ class HFModelDownloader:
             local_model_dir += f"/{model_id.replace('/', '--')}"
 
         print(f"Attempting to fetch model {model_id} with no token")  # notify user that no token is used for the first attempt
-        for i in range(AUTHORIZATION_TRIALS_NUMBER):
-            try:
-                local_model_path = snapshot_download(
-                    repo_id=model_id,
-                    local_dir=local_model_dir,
-                    repo_type="model",
-                )
-                print(f"Model {model_id} fetched from {local_model_path}")
-                return local_model_path
-            except (HfHubHTTPError, RepositoryNotFoundError) as e:
-                if isinstance(e, HfHubHTTPError):
-                    code = getattr(getattr(e, "response", None), "status_code", None)
-                    if code not in {401, 403}:  # Not an authorization error
-                        raise
-                if i == AUTHORIZATION_TRIALS_NUMBER - 1:
-                    print(f"Failed to fetch model {model_id} after {AUTHORIZATION_TRIALS_NUMBER} attempts.",
-                          file=sys.stderr)
-                    return None
-                HFModelDownloader.__retrieve_hugging_face_token()
-                HFModelDownloader.__authenticate()
+        try:
+            local_model_path = snapshot_download(
+                repo_id=model_id,
+                local_dir=local_model_dir,
+                repo_type="model",
+            )
+        except (HfHubHTTPError, RepositoryNotFoundError) as e:
+            print(f"Failed to fetch model {model_id}: {e} with no token, trying with authentication")
+            if isinstance(e, HfHubHTTPError):
+                code = getattr(getattr(e, "response", None), "status_code", None)
+                if code not in {401, 403}:  # Not an authorization error
+                    raise
+            HFModelDownloader.__retrieve_hugging_face_token()
+            if not HFModelDownloader._hf_token:
+                raise EnvironmentError("No Environment variable 'HF_TOKEN' found.")
+            HFModelDownloader.__authenticate()
+        # try again with authentication
+            local_model_path = snapshot_download(
+                repo_id=model_id,
+                local_dir=local_model_dir,
+                repo_type="model",
+            )
+        print(f"Model {model_id} fetched from {local_model_path}")
+        return local_model_path

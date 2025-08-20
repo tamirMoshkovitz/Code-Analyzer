@@ -1,0 +1,31 @@
+# Ignore Python cache & venvs
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+.venv/
+venv/
+
+# Ignore Git
+.git/
+.gitignore
+
+# Ignore editor/IDE configs
+.idea/
+.vscode/
+*.swp
+
+# Ignore build outputs
+build/
+dist/
+*.egg-info/
+
+# Ignore OS clutter
+.DS_Store
+Thumbs.db
+
+# Ignore project specific directories
+models/
+Tests/

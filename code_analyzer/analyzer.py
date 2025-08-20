@@ -2,7 +2,6 @@ import argparse
 import sys
 import traceback
 from pathlib import Path
-from jinja2.utils import Namespace
 from syntax_tree_chunk_parser import SyntaxTreeChunkParser
 from hf_model_downloader import HFModelDownloader
 from hf_model_pipeline import HFModelPipeline
@@ -62,7 +61,7 @@ def _parse_arguments() -> argparse.Namespace:
                         help="Prompt template to use for the model, should contain {code} placeholder, use --debug to see the full prompt")
     parser.add_argument("--treat-h-as-c", action="store_true", default=False,
                         help="Treat .h files as C code, default is False - .h files are treated as C++")
-    parser.add_argument("--add-header-context", action="store_true", default=False, help="Add code header context to each code chunk for better model understanding")
+    parser.add_argument("--no-header-context", action="store_false", default=True, help="Do not add code header context to each code chunk for better model understanding")
     parser.add_argument("--debug", action="store_true", default=False, help="Enable debug output")
     return parser.parse_args()
 
@@ -134,8 +133,7 @@ def _is_header_line(line: str) -> bool:
 def _get_language_from_path(file_path: str, mapping: dict[str, str]) -> str:
     """
     Determine the Tree-sitter language based on the file extension.
-    Returns 'c' for `.c` files, 'cpp' for C++-related extensions,
-    otherwise prints error to stderr and exits.
+    Returns 'c' for `.c` files, 'cpp' for C++-related extensions
     Parameters
     ----------
     file_path : str
@@ -159,26 +157,27 @@ def _get_language_from_path(file_path: str, mapping: dict[str, str]) -> str:
         raise UnsupportedFileError(file_type)
 
 
-def _get_model_path(args: argparse.Namespace) -> str:
+def _get_model_path(model_id: str, model_path: str | None) -> str:
     """Get the model path based on command line arguments.
     Parameters
     ----------
-    args : argparse.Namespace
-        Parsed command line arguments.
+    model_id : str
+        The Hugging Face model ID (e.g., "google/gemma-3-1b-it").
+    model_path : str or None
+        Local path to the model if already downloaded, otherwise None.
     Returns
     -------
     str
         Path to the model.
     """
-    model_id = args.model_id or DEFAULT_MODEL_ID
-    if args.model_path:
-        return args.model_path
+    if model_path:
+        return model_path
     else:
         return HFModelDownloader.get_local_model_path(model_id)
 
 
 def _analyze_code(pipeline: HFModelPipeline, prompt: str, lines_num: int, header_context: str,
-                  header_stop_index: int, code: str, parser: SyntaxTreeChunkParser) -> None:
+                  header_stop_index: int, code: str, parser: SyntaxTreeChunkParser, debug: bool, no_header_context: bool) -> None:
     """Analyze the code using the specified language and number of lines.
     Parameters
     ----------
@@ -196,11 +195,16 @@ def _analyze_code(pipeline: HFModelPipeline, prompt: str, lines_num: int, header
         The code to analyze.
     parser : SyntaxTreeChunkParser
         The parser to use for breaking the code into chunks.
+    debug : bool
+        Whether to enable debug output.
+    no_header_context : bool
+        If True, do not prepend header context to each code chunk.
     """
     print("\nAnalyzer output:\n")
-    chunk_iter = parser.parse_code_into_chunks(code, start_index=header_context and header_stop_index)
+    start_index = header_stop_index if header_context else 0
+    chunk_iter = parser.parse_code_into_chunks(code, start_index=start_index)
     for chunk in chunk_iter:
-        if header_context and args.add_header_context:
+        if header_context and (not no_header_context):
             chunk = header_context + "\n" + chunk
 
         chunk_prompt = prompt.format(
@@ -208,11 +212,11 @@ def _analyze_code(pipeline: HFModelPipeline, prompt: str, lines_num: int, header
             start_line=1,
             total_lines=lines_num,
         )
-        result = pipeline.get_model_response(chunk_prompt, return_full_text=args.debug)
+        result = pipeline.get_model_response(chunk_prompt, return_full_text=debug)
         print(result)
 
 
-def _main(args: Namespace) -> int:
+def _run_analyzer(args: argparse.Namespace) -> int:
     code_path = args.code_file_path
     code = _read_code_file(code_path)
 
@@ -222,35 +226,36 @@ def _main(args: Namespace) -> int:
 
     language_mapping = dict(SUPPORTED_FILES_TO_LANGUAGES)
     if args.treat_h_as_c:
-        SUPPORTED_FILES_TO_LANGUAGES[".h"] = "c"
+        language_mapping[".h"] = "c"
     language = _get_language_from_path(code_path, language_mapping)
 
-    model_path = _get_model_path(args)
+    model_path = _get_model_path(args.model_id, args.model_path)
 
     pipeline = HFModelPipeline(model_path)
 
     code_parser = SyntaxTreeChunkParser(language, args.max_chars)
-    _analyze_code(pipeline, args.prompt, number_of_lines, header_context, header_stop_index, code, code_parser)
+    _analyze_code(pipeline, args.prompt, number_of_lines, header_context, header_stop_index, code,
+                  code_parser, args.debug, args.no_header_context)
 
     print("\nAnalysis complete.\n")
     return 0
 
 
-if __name__ == "__main__":
+def main() -> int:
     args = _parse_arguments()
     try:
-        sys.exit(_main(args))
+        return _run_analyzer(args)
     except KeyboardInterrupt:
-        # 130 is conventional for Ctrl-C
         print("\nInterrupted.", file=sys.stderr)
-        sys.exit(130)
-    except SystemExit as e:
-        # Preserve intended exit codes (e.code may be None)
+        return 130
+    except SystemExit:
         raise
     except Exception as e:
-        # Compact message by default; verbose when --debug
         if args.debug:
             traceback.print_exc()
         else:
             print(f"\nError: {e}", file=sys.stderr)
-        sys.exit(1)
+        return 1
+
+if __name__ == "__main__":
+    sys.exit(main())

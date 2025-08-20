@@ -6,7 +6,7 @@ from jinja2.utils import Namespace
 from syntax_tree_chunk_parser import SyntaxTreeChunkParser
 from hf_model_downloader import HFModelDownloader
 from hf_model_pipeline import HFModelPipeline
-from typing import List
+
 
 SUPPORTED_FILES_TO_LANGUAGES = {".c": "c", # language names should correspond to tree-sitter language names
                                 ".cpp": "cpp",
@@ -62,6 +62,7 @@ def _parse_arguments() -> argparse.Namespace:
                         help="Prompt template to use for the model, should contain {code} placeholder, use --debug to see the full prompt")
     parser.add_argument("--treat-h-as-c", action="store_true", default=False,
                         help="Treat .h files as C code, default is False - .h files are treated as C++")
+    parser.add_argument("--add-header-context", action="store_true", default=False, help="Add code header context to each code chunk for better model understanding")
     parser.add_argument("--debug", action="store_true", default=False, help="Enable debug output")
     return parser.parse_args()
 
@@ -199,7 +200,7 @@ def _analyze_code(pipeline: HFModelPipeline, prompt: str, lines_num: int, header
     print("\nAnalyzer output:\n")
     chunk_iter = parser.parse_code_into_chunks(code, start_index=header_context and header_stop_index)
     for chunk in chunk_iter:
-        if header_context:
+        if header_context and args.add_header_context:
             chunk = header_context + "\n" + chunk
 
         chunk_prompt = prompt.format(

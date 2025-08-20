@@ -56,7 +56,7 @@ class HFModelDownloader:
         if local_model_dir == "./models":
             local_model_dir += f"/{model_id.replace('/', '--')}"
 
-        print(f"Attempting to fetch model {model_id} with no token") # notify user that no token is used for the first attempt
+        print(f"Attempting to fetch model {model_id} with no token")  # notify user that no token is used for the first attempt
         for i in range(AUTHORIZATION_TRIALS_NUMBER):
             try:
                 local_model_path = snapshot_download(
@@ -69,10 +69,11 @@ class HFModelDownloader:
             except (HfHubHTTPError, RepositoryNotFoundError) as e:
                 if isinstance(e, HfHubHTTPError):
                     code = getattr(getattr(e, "response", None), "status_code", None)
-                    if code not in {401, 403}: # Not an authorization error
+                    if code not in {401, 403}:  # Not an authorization error
                         raise
                 if i == AUTHORIZATION_TRIALS_NUMBER - 1:
-                    print(f"Failed to fetch model {model_id} after {AUTHORIZATION_TRIALS_NUMBER} attempts.", file=sys.stderr)
+                    print(f"Failed to fetch model {model_id} after {AUTHORIZATION_TRIALS_NUMBER} attempts.",
+                          file=sys.stderr)
                     return None
                 HFModelDownloader.__retrieve_hugging_face_token()
                 HFModelDownloader.__authenticate()

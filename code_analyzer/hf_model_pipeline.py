@@ -16,6 +16,7 @@ PipelineTasks = Literal[
     "conversational",
 ]
 
+
 class HFModelPipeline:
     """A wrapper for Hugging Face model pipeline to generate text responses."""
 

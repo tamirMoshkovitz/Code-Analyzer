@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "code-analyzer"
+version = "0.1.0"
+description = "CLI for analyzing code"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "You" }]
+dependencies = []  # for now all requirements will be in the docker image
+
+[project.scripts]
+code-analyzer = "code_analyzer.analyzer:main"

@@ -34,19 +34,9 @@ class SyntaxTreeChunkParser:
         root = tree.root_node
         lines = code.splitlines(keepends=True)
 
-        start_index = max(0, min(start_index, len(lines)))
+        start_index = max(0, min(len(lines), start_index))
 
-        units: List[Tuple[int, int, int]] = []  # (start_line, end_line_inclusive, approx_len)
-        for child in root.children:
-            if child.start_byte >= child.end_byte:
-                continue
-            node_start = child.start_point[0]
-            node_end = child.end_point[0]
-            if node_end < start_index:
-                continue
-            node_start = max(node_start, start_index)
-            node_bytes = child.end_byte - child.start_byte
-            units.append((node_start, node_end, node_bytes))
+        units = self._collect_units(root, start_index)
 
         if not units:
             chunk = "".join(
@@ -57,10 +47,59 @@ class SyntaxTreeChunkParser:
                 yield chunk
             return
 
-        # Greedy pack into chunks by character budget
+        for chunk_start, end_exclusive in self._iter_chunk_ranges(units, len(lines), start_index):
+            chunk = "".join(
+                f"Line {lineno + 1}: \t{line}"
+                for lineno, line in enumerate(lines[chunk_start:end_exclusive], start=chunk_start)
+            )
+            yield chunk
+
+
+    def _collect_units(self, root, start_index: int) -> List[Tuple[int, int, int]]:
+        """Collect units from the syntax tree root node.
+        Parameters
+        ----------
+        root : tree_sitter.Node
+            The root node of the syntax tree.
+        start_index : int
+            The line index to start collecting units from.
+        Returns
+        -------
+        List[Tuple[int, int, int]]
+            A list of tuples, each containing (start_line, end_line_inclusive, byte_length)."""
+        units: List[Tuple[int, int, int]] = []
+        for child in root.children:
+            if child.start_byte >= child.end_byte:
+                continue
+            node_start = child.start_point[0]
+            node_end = child.end_point[0]
+            if node_end < start_index:
+                continue
+            node_start = max(node_start, start_index)
+            node_bytes = child.end_byte - child.start_byte
+            units.append((node_start, node_end, node_bytes))
+        return units
+
+    def _iter_chunk_ranges(self, units: List[Tuple[int, int, int]], n_lines: int, start_index: int
+                           )-> Iterable[Tuple[int, int]]:
+        """Iterate over ranges of code chunks based on the collected units.
+        Parameters
+        ----------
+        units : List[Tuple[int, int, int]]
+            A list of tuples, each containing (start_line, end_line_inclusive, byte_length).
+        n_lines : int
+            The total number of lines in the code.
+        start_index : int
+            The line index to start iterating from.
+        Yields
+        -------
+        Tuple[int, int]
+            A tuple containing the start line and end line (exclusive) of each chunk.
+        """
+        if not units:
+            return
         i = 0
         n = len(units)
-        # Initial start is the start of the first node
         next_start_line = max(start_index, units[0][0])
 
         while i < n:
@@ -70,15 +109,11 @@ class SyntaxTreeChunkParser:
             j = i
             while j < n:
                 node_start, node_end_incl, node_chars = units[j]
-                # If this node begins far after our chosen start (due to overlap), advance start once
                 if j == i and node_start < chunk_start:
-                    # Keep chunk_start as-is; the chunk will slice from chunk_start
                     pass
                 if total_chars + node_chars > self._max_chars and j > i:
                     break
                 if total_chars + node_chars > self._max_chars and j == i:
-                    # Ensure forward progress even if a single node exceeds max_chars
-                    # by letting it be alone in a chunk.
                     total_chars = node_chars
                     end_line_incl = node_end_incl
                     j += 1
@@ -87,25 +122,15 @@ class SyntaxTreeChunkParser:
                 end_line_incl = max(end_line_incl, node_end_incl)
                 j += 1
 
-            end_exclusive = end_line_incl + 1
-            # Clamp to file length
-            end_exclusive = min(end_exclusive, len(lines))
+            end_exclusive = min(end_line_incl + 1, n_lines)
             chunk_start = min(chunk_start, end_exclusive - 1)
             chunk_start = max(chunk_start, start_index)
+            yield chunk_start, end_exclusive
 
-            chunk = "".join(
-                f"Line {lineno + 1}: \t{line}"
-                for lineno, line in enumerate(lines[chunk_start:end_exclusive], start=chunk_start)
-            )
-            yield chunk
-
-            if end_exclusive >= len(lines):
+            if end_exclusive >= n_lines:
                 break
 
-            # Prepare for next chunk
             next_start_line = end_exclusive
-
-            # Move i to the first node that intersects or is after next_start_line
             while i < n and units[i][1] < next_start_line:
                 i += 1
             if i >= n:

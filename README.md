@@ -1,6 +1,6 @@
 # Code Analyzer – Docker CLI
 
-Code Analyzer is a Dockerized CLI tool that analyzes your source C/C++ code using local running LLMs.
+Code Analyzer is a Dockerized CLI tool that analyzes your source C/C++ code for vulnerabilities, and suggests fixes, using local running LLMs.
 
 This repository packages the analyzer as a Dockerized CLI.  
 

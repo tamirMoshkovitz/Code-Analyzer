@@ -185,4 +185,4 @@ fabric.properties
 # .idea
 
 # model files
-models/
+models/.idea/
